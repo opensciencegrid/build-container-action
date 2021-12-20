@@ -46,10 +46,10 @@ runs:
         BASE_OSG_SERIES=${{ inputs.osg_series }}
       tags: "${{ steps.generate-tag-list.outputs.taglist }}"
       cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-      
+
   - name: Cache Docker images
     uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
-      key: ${{ inputs.repo }}-buildx-${{ github.sha }}-${{ github.run_id }}
-  
+      key: ${{ inputs.osg-series}}-${{ inputs.repo }}-buildx-${{ github.sha }}-${{ github.run_id }}
+
