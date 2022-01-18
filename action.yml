@@ -13,11 +13,32 @@ inputs:
     description: 'List of tags that gets passed along to the docker build args'
     required: true
     default: '' # set to an empty string
+  context:
+    description: 'Path to container files, including Dockerfile'
+    required: false
+    default: '.'
 
 runs:
   using: "composite"
   steps:
   - uses: actions/checkout@v2
+
+  - id: generate-image-name
+    shell: bash
+    run: |
+      if [[ ${{ inputs.context }} == "." ]] || \
+         [[ ${{ inputs.context }} == "./" ]]; then
+         # Try to guess the image name from our docker repo naming conventions
+         # E.g., opensciencegrid/docker-frontier-squid
+         IMAGE_NAME=${GITHUB_REPOSITORY/opensciencegrid\/docker-//}
+      elif [[ -d ${{ inputs.context }} ]]; then
+         # Assume that the containing dir is the image name
+         IMAGE_NAME=$(basename ${{ inputs.context }})
+      else
+        echo "${{ inputs.context }} is not a directory"
+        exit 1
+      fi
+      echo "::set-output name=image::${IMAGE_NAME//-/_}"
 
   - name: Generate tag list
     id: generate-tag-list
@@ -25,7 +46,7 @@ runs:
       REPO: ${{ inputs.repo }}
       OSG_SERIES: ${{ inputs.osg_series }}
     run: |
-      docker_repo=${GITHUB_REPOSITORY/opensciencegrid\/docker-/opensciencegrid/}
+      docker_repo=${{ steps.generate-image-name.outputs.image }}
       if [ -z "${{ inputs.tag_list }}" ]; then
         tag_list=$docker_repo:$OSG_SERIES-$REPO,$docker_repo:$OSG_SERIES-$REPO-$(date +%Y%m%d-%H%M)
       else
@@ -41,6 +62,7 @@ runs:
     uses: docker/build-push-action@v2.2.0
     with:
       push: false
+      context: ${{ inputs.context }}
       build-args: |
         BASE_YUM_REPO=${{ inputs.repo }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
@@ -51,5 +73,5 @@ runs:
     uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
-      key: ${{ inputs.osg_series}}-${{ inputs.repo }}-buildx-${{ github.sha }}-${{ github.run_id }}
+      key: ${{ steps.generate-image-name.outputs.image }}-${{ inputs.osg_series}}-${{ inputs.repo }}-buildx-${{ github.sha }}-${{ github.run_id }}
 
