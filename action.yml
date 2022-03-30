@@ -16,7 +16,7 @@ inputs:
   name:
     description: 'Name of image'
     required: false
-    default: 'temp'
+    default: ''
 
 runs:
   using: "composite"
@@ -26,7 +26,7 @@ runs:
   - id: generate-image-name
     shell: bash
     run: |
-      if [[ ${{ inputs.name }} != "temp" ]]; then
+      if [[ -n ${{ inputs.name }} ]]; then
         # A name was specified
         IMAGE_NAME=$GITHUB_REPOSITORY_OWNER/${{ inputs.name }}
       elif [[ ${{ inputs.context }} == "." ]] || \
