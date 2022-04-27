@@ -63,8 +63,8 @@ runs:
       cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
   - name: Cache Docker images
-    uses: actions/cache@v2
     if: ${{ inputs.cache }}
+    uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
       key: ${{ steps.generate-image-name.outputs.image }}_${{ inputs.osg_series}}_${{ inputs.repo }}_buildx_${{ github.sha }}_${{ github.run_id }}
