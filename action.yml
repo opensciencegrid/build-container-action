@@ -56,7 +56,7 @@ runs:
         CACHE_FILE="/tmp/.buildx-cache"
       else
         echo "in else block"
-        CACHE_FILE="/dev/null"
+        CACHE_FILE="/tmp/throwaway"
       fi
       echo $CACHE_FILE
       echo "::set-output name=cachefile::$CACHE_FILE"
