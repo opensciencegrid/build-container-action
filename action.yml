@@ -20,6 +20,10 @@ inputs:
       used to pass the Dockerfile as $TIMESTAMP_TAG
     required: false
     default: ''
+  cache:
+    description: 'Generate a cache per build'
+    required: false
+    default: true
 
 runs:
   using: "composite"
@@ -42,6 +46,16 @@ runs:
         exit 1
       fi
       echo "::set-output name=image::$IMAGE_NAME"
+  
+  - id: generate-cache-file
+    shell: bash
+    run: |
+      if [[ ${{ inputs.cache }} == true ]]; then
+        CACHE_FILE="/tmp/.buildx-cache"
+      else
+        CACHE_FILE="/tmp/throwaway"
+      fi
+      echo "::set-output name=cachefile::$CACHE_FILE"
 
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
@@ -56,10 +70,4 @@ runs:
         BASE_OSG_SERIES=${{ inputs.osg_series }}
         TIMESTAMP_TAG=${{ inputs.timestamp_tag }}
       tags: "latest"
-      cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-
-  - name: Cache Docker images
-    uses: actions/cache@v2
-    with:
-      path: /tmp/.buildx-cache
-      key: ${{ steps.generate-image-name.outputs.image }}_${{ inputs.osg_series}}_${{ inputs.repo }}_buildx_${{ github.sha }}_${{ github.run_id }}
+      cache-to: type=local,dest=${{ steps.generate-cache-file.outputs.cachefile }},mode=max
