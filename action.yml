@@ -13,6 +13,10 @@ inputs:
     description: 'Path to container files, including Dockerfile'
     required: false
     default: '.'
+  dockerfile:
+    description: 'Filename of the Dockerfile'
+    required: false
+    default: 'Dockerfile'
   timestamp_tag:
     description: >-
       Timestamped tag name (e.g.,
@@ -51,6 +55,7 @@ runs:
     with:
       push: false
       context: ${{ inputs.context }}
+      file: ${{ inputs.dockerfile }}
       build-args: |
         BASE_YUM_REPO=${{ inputs.repo }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
