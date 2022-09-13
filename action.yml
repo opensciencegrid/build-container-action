@@ -41,7 +41,7 @@ runs:
         echo "${{ inputs.context }} is not a directory"
         exit 1
       fi
-      echo "::set-output name=image::$IMAGE_NAME"
+      echo "::set-output name=image::${IMAGE_NAME,,}"
 
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
