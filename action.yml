@@ -20,6 +20,11 @@ inputs:
       used to pass the Dockerfile as $TIMESTAMP_TAG
     required: false
     default: ''
+  image_name:
+    description: 'Name of the image to build, e.g. "opensciencegrid/software-base"'
+    required: false
+    default: ''
+    
 
 runs:
   using: "composite"
@@ -29,7 +34,9 @@ runs:
   - id: generate-image-name
     shell: bash
     run: |
-      if [[ ${{ inputs.context }} == "." ]] || \
+      if [[ -n ${{ inputs.image_name }} ]]; then
+          IMAGE_NAME="${{ inputs.image_name }}"
+      elif [[ ${{ inputs.context }} == "." ]] || \
          [[ ${{ inputs.context }} == "./" ]]; then
          # Try to guess the image name from our docker repo naming conventions
          # E.g., opensciencegrid/docker-frontier-squid
@@ -38,10 +45,10 @@ runs:
          # Assume that the containing dir is the image name
          IMAGE_NAME=$(basename ${{ inputs.context }})
       else
-        echo "${{ inputs.context }} is not a directory"
+        echo "No image_name provided and ${{ inputs.context }} is not a directory"
         exit 1
       fi
-      echo "::set-output name=image::$IMAGE_NAME"
+      echo "::set-output name=image::${IMAGE_NAME,,}"
 
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
