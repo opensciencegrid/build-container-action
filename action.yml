@@ -3,12 +3,18 @@ name: 'Build Container Action'
 description: 'Builds and caches the image'
 
 inputs:
+  tag_name:
+    description: 'user specified tag name'
+    required: false
+    default: ''
   osg_series:
     description: 'OSG release series used to install packages'
-    required: true
+    required: false
+    default: '3.6'
   repo:
     description: 'Input string that gets passed along to the docker build args'
-    required: true
+    required: false
+    default: 'release'
   context:
     description: 'Path to container files, including Dockerfile'
     required: false
@@ -57,11 +63,11 @@ runs:
     run: echo "::set-output name=dtag::$(date +%Y%m%d-%H%M)"
   - id: create_timestamp_tag
     shell: bash
-    run: echo "::set-output name=tags::${IMAGE}:${OSG}-${REPO}-${DATE}"
+    run: echo "::set-output name=tags::${IMAGE}:${TAGNAME:-$DEFAULTTAG}-${DATE}"
     env:
       IMAGE: ${{ steps.generate-image-name.outputs.image }}
-      OSG: ${{ inputs.osg_series }}
-      REPO: ${{ inputs.repo }}
+      TAGNAME: ${{ inputs.tag_name }}
+      DEFAULTTAG : ${{ inputs.osg_series }}-${{ inputs.repo }}
       DATE: ${{ steps.mkdatetag.outputs.dtag }}
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
