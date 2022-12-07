@@ -43,7 +43,6 @@ runs:
   - id: generate-image-name
     shell: bash
     run: |
-
       if [[ -n "${{ inputs.image_name }}" ]]; then
           IMAGE_NAME="${{ inputs.image_name }}"
       elif [[ ${{ inputs.context }} == "." ]] || \
