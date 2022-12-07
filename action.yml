@@ -33,7 +33,7 @@ inputs:
     
 outputs:
       tags: 
-        description: generated timestamp
+        description: generated timestamp tag
         value: ${{ steps.create_timestamp_tag.outputs.tags }}
 runs:
   using: "composite"
