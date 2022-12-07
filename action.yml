@@ -3,12 +3,18 @@ name: 'Build Container Action'
 description: 'Builds and caches the image'
 
 inputs:
+  tag_name:
+    description: 'user specified tag name'
+    required: false
+    default: ''
   osg_series:
     description: 'OSG release series used to install packages'
-    required: true
+    required: false
+    default: '3.6'
   repo:
     description: 'Input string that gets passed along to the docker build args'
-    required: true
+    required: false
+    default: 'release'
   context:
     description: 'Path to container files, including Dockerfile'
     required: false
@@ -25,7 +31,10 @@ inputs:
     required: false
     default: ''
     
-
+outputs:
+      tags: 
+        description: generated timestamp tag
+        value: ${{ steps.create_timestamp_tag.outputs.tags }}
 runs:
   using: "composite"
   steps:
@@ -34,7 +43,7 @@ runs:
   - id: generate-image-name
     shell: bash
     run: |
-      if [[ -n ${{ inputs.image_name }} ]]; then
+      if [[ -n "${{ inputs.image_name }}" ]]; then
           IMAGE_NAME="${{ inputs.image_name }}"
       elif [[ ${{ inputs.context }} == "." ]] || \
          [[ ${{ inputs.context }} == "./" ]]; then
@@ -49,7 +58,17 @@ runs:
         exit 1
       fi
       echo "::set-output name=image::${IMAGE_NAME,,}"
-
+  - id: mkdatetag
+    shell: bash
+    run: echo "::set-output name=dtag::$(date +%Y%m%d-%H%M)"
+  - id: create_timestamp_tag
+    shell: bash
+    run: echo "::set-output name=tags::${IMAGE}:${TAGNAME:-$DEFAULTTAG}-${DATE}"
+    env:
+      IMAGE: ${{ steps.generate-image-name.outputs.image }}
+      TAGNAME: ${{ inputs.tag_name }}
+      DEFAULTTAG : ${{ inputs.osg_series }}-${{ inputs.repo }}
+      DATE: ${{ steps.mkdatetag.outputs.dtag }}
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
 
@@ -61,7 +80,7 @@ runs:
       build-args: |
         BASE_YUM_REPO=${{ inputs.repo }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
-        TIMESTAMP_TAG=${{ inputs.timestamp_tag }}
+        TIMESTAMP_TAG=${{ steps.create_timestamp_tag.outputs.tags }}
       tags: "latest"
       cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
