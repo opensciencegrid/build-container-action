@@ -14,7 +14,7 @@ inputs:
       BASE_OSG_SERIES build argument (default: 3.6)
     required: false
     default: '3.6'
-  repo:
+  osg_repo:
     description: >-
       OSG Yum repositories enabled (including the upcoming
       equivalent), intended for use with the OSG software-base image.
@@ -82,7 +82,7 @@ runs:
       push: false
       context: ${{ inputs.context }}
       build-args: |
-        BASE_YUM_REPO=${{ inputs.repo }}
+        BASE_YUM_REPO=${{ inputs.osg_repo }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
         TIMESTAMP_TAG=${{ steps.create_timestamp_tag.outputs.tags }}
       tags: "latest"
@@ -92,4 +92,4 @@ runs:
     uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
-      key: ${{ steps.generate-image-name.outputs.image }}_${{ inputs.osg_series}}_${{ inputs.repo }}_buildx_${{ github.sha }}_${{ github.run_id }}
+      key: ${{ steps.generate-image-name.outputs.image }}_${{ inputs.osg_series}}_${{ inputs.osg_repo }}_buildx_${{ github.sha }}_${{ github.run_id }}
