@@ -8,11 +8,18 @@ inputs:
     required: false
     default: ''
   osg_series:
-    description: 'OSG release series used to install packages'
+    description: >-
+      OSG release series used to install packages, intended for use
+      with the OSG software-base image. Passed along as the
+      BASE_OSG_SERIES build argument (default: 3.6)
     required: false
     default: '3.6'
   repo:
-    description: 'Input string that gets passed along to the docker build args'
+    description: >-
+      OSG Yum repositories enabled (including the upcoming
+      equivalent), intended for use with the OSG software-base image.
+      Passed along as the BASE_YUM_REPO build argument (default:
+      release)
     required: false
     default: 'release'
   context:
@@ -32,9 +39,13 @@ inputs:
     default: ''
     
 outputs:
-      tags: 
-        description: generated timestamp tag
-        value: ${{ steps.create_timestamp_tag.outputs.tags }}
+  tags:
+    description: >-
+      Image name, including timestamp tag. Intended for use as a unique,
+      immutable identifier. For example,
+      "opensciencegrid/osgvo-docker-pilot:3.6-release-20221207-1729"
+    value: ${{ steps.create_timestamp_tag.outputs.tags }}
+
 runs:
   using: "composite"
   steps:
