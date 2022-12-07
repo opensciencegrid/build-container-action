@@ -69,17 +69,15 @@ runs:
         exit 1
       fi
       echo "::set-output name=image::${IMAGE_NAME,,}"
-  - id: mkdatetag
-    shell: bash
-    run: echo "::set-output name=dtag::$(date +%Y%m%d-%H%M)"
+
   - id: create_timestamp_tag
     shell: bash
-    run: echo "::set-output name=tags::${IMAGE}:${TAGNAME:-$DEFAULTTAG}-${DATE}"
+    run: echo "::set-output name=tags::${IMAGE}:${TAGNAME:-$DEFAULTTAG}-$(date +%Y%m%d-%H%M)"
     env:
       IMAGE: ${{ steps.generate-image-name.outputs.image }}
       TAGNAME: ${{ inputs.tag_name }}
       DEFAULTTAG : ${{ inputs.osg_series }}-${{ inputs.repo }}
-      DATE: ${{ steps.mkdatetag.outputs.dtag }}
+
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
 
