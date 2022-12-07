@@ -26,13 +26,6 @@ inputs:
     description: 'Path to container files, including Dockerfile'
     required: false
     default: '.'
-  timestamp_tag:
-    description: >-
-      Timestamped tag name (e.g.,
-      "opensciencegrid/osgvo-docker-pilot3.6-release-YYYYMMDD-hhmm")
-      used to pass the Dockerfile as $TIMESTAMP_TAG
-    required: false
-    default: ''
   image_name:
     description: 'Name of the image to build, e.g. "opensciencegrid/software-base"'
     required: false
