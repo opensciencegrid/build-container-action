@@ -22,6 +22,13 @@ inputs:
       release)
     required: false
     default: 'release'
+  base_os:
+    description: >-
+      Operating system of the base image, intended for use with the
+      OSG software-base image.  Passed along as the BASE_OS build
+      argument (default: el8)
+    required: false
+    default: el8
   context:
     description: 'Path to container files, including Dockerfile'
     required: false
@@ -83,6 +90,7 @@ runs:
       context: ${{ inputs.context }}
       build-args: |
         BASE_YUM_REPO=${{ inputs.osg_repo }}
+        BASE_OS=${{ inputs.base_os }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
         TIMESTAMP_TAG=${{ steps.create_timestamp_tag.outputs.tags }}
       tags: "latest"
