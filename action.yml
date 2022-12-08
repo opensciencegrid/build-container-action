@@ -1,6 +1,5 @@
-name: 'Build Container Action'
-
-description: 'Builds and caches the image'
+name: 'OSG Build Container Action'
+description: 'Builds and optionally caches/pushes the image'
 
 inputs:
   osg_series:
@@ -41,6 +40,27 @@ inputs:
       Store built images in GitHub the GitHub cache (default: true)
     required: false
     default: true
+  push_image:
+    description: >-
+      Push the built image to a container registry (default: false).
+      Requires 'registry_url', 'registry_user', and 'registry_pass'
+      arguments.
+    required: false
+    default: false
+  registry_url:
+    description: >
+      URL for the target container registry
+    required: false
+  registry_user:
+    description: >-
+      Username for the target container registry. Should be kept in
+      some form of GitHub secret.
+    required: false
+  registry_pass:
+    description: >-
+      Password for the target container registry. Should be kept in
+      some form of GitHub secret.
+    required: false
 
 outputs:
   tags:
@@ -60,15 +80,22 @@ runs:
   steps:
   - uses: actions/checkout@v2
 
+  - name: Check input requirements
+    if: inputs.push_image && inputs.registry_url && inputs.registry_user && ! inputs.registry_pass
+    shell: bash
+    run: |
+      echo "::error ::'push_image' specified but missing 'registry_url', 'registry_user', or 'registry_pass'"
+      exit 1
+
   - id: generate-tags
     name: Generate tag list
     shell: bash
     env:
+      REGISTRY: ${{ inputs.registry_url }}
       OSG_REPO: ${{ inputs.osg_repo }}
       OSG_SERIES: ${{ inputs.osg_series }}
       OUTPUT_IMAGE: ${{ inputs.output_image }}
     run: |
-      TIMESTAMP=$(date +%Y%m%d-%H%M)
       DEFAULT_TAG=${OSG_SERIES}-${OSG_REPO}
 
       if [[ -n "${OUTPUT_IMAGE}" ]]; then
@@ -86,6 +113,12 @@ runs:
         exit 1
       fi
 
+      # If we're pushing images, we need to prepend the registry for the build-push-action
+      if [[ -n "${REGISTRY}" ]]; then
+          IMAGE_NAME=${REGISTRY}/${IMAGE_NAME}
+      fi
+
+      TIMESTAMP=$(date +%Y%m%d-%H%M)
       TIMESTAMP_IMAGE=${IMAGE_NAME}-${TIMESTAMP}
 
       echo "tag_list=${IMAGE_NAME},${TIMESTAMP_IMAGE}"                          >> ${GITHUB_OUTPUT}
@@ -95,10 +128,18 @@ runs:
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
 
+  - name: Container Registry Login
+    if: inputs.push_image
+    uses: docker/login-action@v1
+    with:
+      registry: ${{ inputs.registry_url }}
+      username: ${{ inputs.registry_user }}
+      password: ${{ inputs.registry_pass }}
+
   - name: Build and push Docker images
     uses: docker/build-push-action@v2.8.0
     with:
-      push: false
+      push: ${{ inputs.push_image }}
       context: ${{ inputs.context }}
       build-args: |
         BASE_YUM_REPO=${{ inputs.osg_repo }}
