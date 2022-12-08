@@ -36,7 +36,12 @@ inputs:
       e.g. "opensciencegrid/osgvo-docker-pilot:3.6-release"
     required: false
     default: ''
-    
+  cache_image:
+    description: >-
+      Store built images in GitHub the GitHub cache (default: true)
+    required: false
+    default: true
+
 outputs:
   tags:
     description: >-
@@ -104,6 +109,7 @@ runs:
       cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
   - name: Cache Docker images
+    if: inputs.cache_image
     uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
