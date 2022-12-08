@@ -3,10 +3,6 @@ name: 'Build Container Action'
 description: 'Builds and caches the image'
 
 inputs:
-  tag_name:
-    description: 'user specified tag name'
-    required: false
-    default: ''
   osg_series:
     description: >-
       OSG release series used to install packages, intended for use
@@ -33,8 +29,11 @@ inputs:
     description: 'Path to container files, including Dockerfile'
     required: false
     default: '.'
-  image_name:
-    description: 'Name of the image to build, e.g. "opensciencegrid/software-base"'
+  output_image:
+    description: >-
+      Name of the image and tag for the resultant image build
+      following the <name>/<tag> format,
+      e.g. "opensciencegrid/osgvo-docker-pilot:3.6-release"
     required: false
     default: ''
     
@@ -44,39 +43,49 @@ outputs:
       Image name, including timestamp tag. Intended for use as a unique,
       immutable identifier. For example,
       "opensciencegrid/osgvo-docker-pilot:3.6-release-20221207-1729"
-    value: ${{ steps.create_timestamp_tag.outputs.tags }}
+    value: ${{ steps.generate-tags.outputs.ts_image }}
+  cache_key:
+    description: >-
+      Key referencing the GitHub cache containing the layers of the
+      built container image
+    value: ${{ steps.generate-tags.outputs.cache_key }}
 
 runs:
   using: "composite"
   steps:
   - uses: actions/checkout@v2
 
-  - id: generate-image-name
+  - id: generate-tags
+    name: Generate tag list
     shell: bash
+    env:
+      OSG_REPO: ${{ inputs.osg_repo }}
+      OSG_SERIES: ${{ inputs.osg_series }}
+      OUTPUT_IMAGE: ${{ inputs.output_image }}
     run: |
-      if [[ -n "${{ inputs.image_name }}" ]]; then
-          IMAGE_NAME="${{ inputs.image_name }}"
+      TIMESTAMP=$(date +%Y%m%d-%H%M)
+      DEFAULT_TAG=${OSG_SERIES}-${OSG_REPO}
+
+      if [[ -n "${OUTPUT_IMAGE}" ]]; then
+          IMAGE_NAME=${OUTPUT_IMAGE%:*}
       elif [[ ${{ inputs.context }} == "." ]] || \
          [[ ${{ inputs.context }} == "./" ]]; then
          # Try to guess the image name from our docker repo naming conventions
          # E.g., opensciencegrid/docker-frontier-squid
-         IMAGE_NAME=${GITHUB_REPOSITORY/opensciencegrid\/docker-//}
+         IMAGE_NAME=${GITHUB_REPOSITORY/opensciencegrid\/docker-//}-${DEFAULT_TAG}
       elif [[ -d ${{ inputs.context }} ]]; then
          # Assume that the containing dir is the image name
-         IMAGE_NAME=$(basename ${{ inputs.context }})
+         IMAGE_NAME=$(basename ${{ inputs.context }})-${DEFAULT_TAG}
       else
-        echo "No image_name provided and ${{ inputs.context }} is not a directory"
+        echo "No output_image provided and ${{ inputs.context }} is not a directory"
         exit 1
       fi
-      echo "::set-output name=image::${IMAGE_NAME,,}"
 
-  - id: create_timestamp_tag
-    shell: bash
-    run: echo "::set-output name=tags::${IMAGE}:${TAGNAME:-$DEFAULTTAG}-$(date +%Y%m%d-%H%M)"
-    env:
-      IMAGE: ${{ steps.generate-image-name.outputs.image }}
-      TAGNAME: ${{ inputs.tag_name }}
-      DEFAULTTAG : ${{ inputs.osg_series }}-${{ inputs.repo }}
+      TIMESTAMP_IMAGE=${IMAGE_NAME}-${TIMESTAMP}
+
+      echo "tag_list=${IMAGE_NAME},${TIMESTAMP_IMAGE}"                          >> ${GITHUB_OUTPUT}
+      echo "ts_image=${TIMESTAMP-IMAGE}"                                        >> ${GITHUB_OUTPUT}
+      echo "cache_key=$(tr ':/' '_' <<< $TIMESTAMP_IMAGE)_buildx_${GITHUB_SHA}" >> ${GITHUB_OUTPUT}
 
   - name: Set up Docker Buildx
     uses: docker/setup-buildx-action@v1
@@ -90,12 +99,12 @@ runs:
         BASE_YUM_REPO=${{ inputs.osg_repo }}
         BASE_OS=${{ inputs.base_os }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
-        TIMESTAMP_TAG=${{ steps.create_timestamp_tag.outputs.tags }}
-      tags: "latest"
+        TIMESTAMP_TAG=${{ steps.generate-tags.outputs.ts_image }}
+      tags: ${{ steps.generate-tags.outputs.tag_list }}
       cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
   - name: Cache Docker images
     uses: actions/cache@v2
     with:
       path: /tmp/.buildx-cache
-      key: ${{ steps.generate-image-name.outputs.image }}_${{ inputs.osg_series}}_${{ inputs.osg_repo }}_buildx_${{ github.sha }}_${{ github.run_id }}
+      key: ${{ steps.generate-tags.outputs.cache_key }}
