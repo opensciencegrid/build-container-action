@@ -86,10 +86,10 @@ runs:
       && ( ! inputs.registry_url
       || ! inputs.registry_user
       || ! inputs.registry_pass)
-    shell: bash
-    run: |
-      echo "::error ::'push_image' specified but missing 'registry_url', 'registry_user', or 'registry_pass'"
-      exit 1
+    uses: actions/github-script@v3
+    with:
+      script: |
+        core.setFailed("'push_image' specified but missing 'registry_url', 'registry_user', or 'registry_pass'")
 
   - id: generate-tags
     name: Generate tag list
