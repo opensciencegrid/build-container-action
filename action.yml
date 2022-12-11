@@ -146,6 +146,7 @@ runs:
     if: success()
     uses: docker/build-push-action@v3.2.0
     with:
+      load: ${{ ! fromJSon(inputs.push_image) }}
       push: ${{ fromJSon(inputs.push_image) }}
       context: ${{ inputs.context }}
       build-args: |
