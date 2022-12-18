@@ -104,7 +104,7 @@ runs:
       DEFAULT_TAG=${OSG_SERIES}-${OSG_REPO}
 
       if [[ -n "${OUTPUT_IMAGE}" ]]; then
-          IMAGE_NAME=${OUTPUT_IMAGE%:*}
+          IMAGE_NAME=${OUTPUT_IMAGE}
       elif [[ ${{ inputs.context }} == "." ]] || \
          [[ ${{ inputs.context }} == "./" ]]; then
          # Try to guess the image name from our docker repo naming conventions
