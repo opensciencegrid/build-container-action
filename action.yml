@@ -63,7 +63,12 @@ inputs:
     required: false
 
 outputs:
-  tags:
+  image-list:
+    description: >-
+      Comma-separated list of image names. For example,
+      "opensciencegrid/osgvo-docker-pilot:3.6-release,opensciencegrid/osgvo-docker-pilot:3.6-release-20221207-1729"
+    value: ${{ steps.generate-tags.outputs.tag_list }}
+  timestamp-image:
     description: >-
       Image name, including timestamp tag. Intended for use as a unique,
       immutable identifier. For example,
@@ -127,7 +132,7 @@ runs:
       TIMESTAMP_IMAGE=${IMAGE_NAME}-${TIMESTAMP}
 
       echo "tag_list=${IMAGE_NAME},${TIMESTAMP_IMAGE}"                          >> ${GITHUB_OUTPUT}
-      echo "ts_image=${TIMESTAMP-IMAGE}"                                        >> ${GITHUB_OUTPUT}
+      echo "ts_image=${TIMESTAMP_IMAGE}"                                        >> ${GITHUB_OUTPUT}
       echo "cache_key=$(tr ':/' '_' <<< $TIMESTAMP_IMAGE)_buildx_${GITHUB_SHA}" >> ${GITHUB_OUTPUT}
 
   - name: Set up Docker Buildx
