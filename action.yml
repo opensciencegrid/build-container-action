@@ -114,10 +114,10 @@ runs:
          [[ ${{ inputs.context }} == "./" ]]; then
          # Try to guess the image name from our docker repo naming conventions
          # E.g., opensciencegrid/docker-frontier-squid
-         IMAGE_NAME=${GITHUB_REPOSITORY/opensciencegrid\/docker-//}-${DEFAULT_TAG}
+         IMAGE_NAME=${GITHUB_REPOSITORY/opensciencegrid\/docker-//}:${DEFAULT_TAG}
       elif [[ -d ${{ inputs.context }} ]]; then
          # Assume that the containing dir is the image name
-         IMAGE_NAME=$(basename ${{ inputs.context }})-${DEFAULT_TAG}
+         IMAGE_NAME=$(basename ${{ inputs.context }}):${DEFAULT_TAG}
       else
         echo "No output_image provided and ${{ inputs.context }} is not a directory"
         exit 1
