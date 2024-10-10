@@ -66,6 +66,25 @@ inputs:
     required: false
     default: 'linux/amd64'
 
+  push_by_digest:
+    description: Push the artifact to the registry without any associated tags.
+    required: false
+    default: false
+
+  buildx_setup:
+    description: >-
+      Whether to run docker buildx setup. Should be set to false to preserve caching
+      if multiple docker builds are run in a single job.
+    required: false
+    default: true
+
+  timestamp:
+    description: >-
+      Timestamp tag for image. Intended for use as a unique, immutable identifier. 
+      For example, "20221207-1729". Set to current timestamp if unspecified.
+    required: false
+    default: ''
+
 outputs:
   image-list:
     description: >-
@@ -83,6 +102,12 @@ outputs:
       Key referencing the GitHub cache containing the layers of the
       built container image
     value: ${{ steps.generate-tags.outputs.cache_key }}
+
+  digest:
+    description: >-
+      Key referencing the GitHub cache containing the layers of the
+      built container image
+    value: ${{ steps.build-and-push.outputs.digest }}
 
 runs:
   using: "composite"
@@ -109,6 +134,7 @@ runs:
       OSG_REPO: ${{ inputs.osg_repo }}
       OSG_SERIES: ${{ inputs.osg_series }}
       OUTPUT_IMAGE: ${{ inputs.output_image }}
+      TIMESTAMP: ${{ inputs.timestamp }}
     run: |
       DEFAULT_TAG=${OSG_SERIES}-${OSG_REPO}
 
@@ -127,20 +153,30 @@ runs:
         exit 1
       fi
 
+
+      if [[ -z "$TIMESTAMP" ]]; then
+        TIMESTAMP=$(date +%Y%m%d-%H%M)
+      fi
+      
+      # Timestamp is a build arg, so layer caching will fail when using buildx to push to multiple
+      # registries if the registry is included. Always omit the registry from the build arg. 
+      TIMESTAMP_IMAGE_NO_REGISTRY=${IMAGE_NAME}-${TIMESTAMP}
+
       # If we're pushing images, we need to prepend the registry for the build-push-action
       if [[ -n "${REGISTRY}" ]]; then
           IMAGE_NAME=${REGISTRY}/${IMAGE_NAME}
       fi
 
-      TIMESTAMP=$(date +%Y%m%d-%H%M)
       TIMESTAMP_IMAGE=${IMAGE_NAME}-${TIMESTAMP}
 
       echo "tag_list=${IMAGE_NAME},${TIMESTAMP_IMAGE}"                          >> ${GITHUB_OUTPUT}
       echo "ts_image=${TIMESTAMP_IMAGE}"                                        >> ${GITHUB_OUTPUT}
+      echo "ts_image_no_registry=${TIMESTAMP_IMAGE_NO_REGISTRY}"                >> ${GITHUB_OUTPUT}
       echo "cache_key=$(tr ':/' '_' <<< $TIMESTAMP_IMAGE)_buildx_${GITHUB_SHA}" >> ${GITHUB_OUTPUT}
+      echo "base_image=${IMAGE_NAME%:*}"                                        >> ${GITHUB_OUTPUT}
 
   - name: Set up Docker Buildx
-    if: success()
+    if: success() && fromJSON(inputs.buildx_setup)
     uses: docker/setup-buildx-action@v2
 
   - name: Container Registry Login
@@ -151,21 +187,35 @@ runs:
       username: ${{ inputs.registry_user }}
       password: ${{ inputs.registry_pass }}
 
-  - name: Build and push Docker images
-    if: success()
-    uses: docker/build-push-action@v3.2.0
+  - name: Build and push Docker images by digest
+    id: build-and-push
+    if: success() && fromJSON(inputs.push_by_digest)
+    uses: docker/build-push-action@v6
     with:
-      load: ${{ ! fromJSon(inputs.push_image) }}
-      push: ${{ fromJSon(inputs.push_image) }}
       context: ${{ inputs.context }}
       platforms: ${{ inputs.platform }}
       build-args: |
         BASE_YUM_REPO=${{ inputs.osg_repo }}
         BASE_OS=${{ inputs.base_os }}
         BASE_OSG_SERIES=${{ inputs.osg_series }}
-        TIMESTAMP_IMAGE=${{ steps.generate-tags.outputs.ts_image }}
+        TIMESTAMP_IMAGE=${{ steps.generate-tags.outputs.ts_image_no_registry }}
+      outputs: type=image,name=${{ steps.generate-tags.outputs.base_image }},push-by-digest=true,name-canonical=true,push=true
+
+  - name: Build and push Docker images
+    id: build
+    if: success() && !fromJSON(inputs.push_by_digest)
+    uses: docker/build-push-action@v6
+    with:
+      load: ${{ !fromJSON(inputs.push_image) }}
+      push: ${{ fromJSON(inputs.push_image) }}
+      context: ${{ inputs.context }}
+      platforms: ${{ inputs.platform }}
+      build-args: |
+        BASE_YUM_REPO=${{ inputs.osg_repo }}
+        BASE_OS=${{ inputs.base_os }}
+        BASE_OSG_SERIES=${{ inputs.osg_series }}
+        TIMESTAMP_IMAGE=${{ steps.generate-tags.outputs.ts_image_no_registry }}
       tags: ${{ steps.generate-tags.outputs.tag_list }}
-      cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
 
   - name: Cache Docker images
     if: success() && fromJSON(inputs.cache_image)
@@ -173,3 +223,4 @@ runs:
     with:
       path: /tmp/.buildx-cache
       key: ${{ steps.generate-tags.outputs.cache_key }}
+
