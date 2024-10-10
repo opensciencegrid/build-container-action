@@ -167,10 +167,6 @@ runs:
           IMAGE_NAME=${REGISTRY}/${IMAGE_NAME}
       fi
 
-      if [[ -z "$TIMESTAMP" ]]; then
-        TIMESTAMP=$(date +%Y%m%d-%H%M)
-      fi
-
       TIMESTAMP_IMAGE=${IMAGE_NAME}-${TIMESTAMP}
 
       echo "tag_list=${IMAGE_NAME},${TIMESTAMP_IMAGE}"                          >> ${GITHUB_OUTPUT}
@@ -210,8 +206,8 @@ runs:
     if: success() && !fromJSON(inputs.push_by_digest)
     uses: docker/build-push-action@v6
     with:
-      load: ${{ !fromJson(inputs.push_image) }}
-      push: ${{ fromJson(inputs.push_image) }}
+      load: ${{ !fromJSON(inputs.push_image) }}
+      push: ${{ fromJSON(inputs.push_image) }}
       context: ${{ inputs.context }}
       platforms: ${{ inputs.platform }}
       build-args: |
