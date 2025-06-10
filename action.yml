@@ -85,6 +85,13 @@ inputs:
     required: false
     default: ''
 
+  clean_before_build:
+    description: >-
+      Whether to undo all unstaged changes to the repo prior to build. May interfere
+      with artifacts generated in previous GHA steps.
+    required: false
+    default: true
+
 outputs:
   image-list:
     description: >-
@@ -113,6 +120,8 @@ runs:
   using: "composite"
   steps:
   - uses: actions/checkout@v3
+    with:
+      clean: ${{ inputs.clean_before_build }}
 
   - name: Check input requirements
     if: >-
